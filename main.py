@@ -5,7 +5,10 @@ from discord.ext import commands
 import sqlite3
 import random
 import csv
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 # intents need to be true for events to work
