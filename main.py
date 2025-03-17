@@ -2,6 +2,8 @@ import os
 import discord
 from discord.ext import commands
 import sqlite3
+import random
+import csv
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
@@ -29,6 +31,22 @@ def translate_word(word):
     conn.close()
     return result[0] if result else None  # if word found -> translation if not -> none
 
+# path of csv file
+file_path = './jokes/nokat.csv'
+
+# Function to randomly select a joke
+async def get_random_joke(file_path):
+    with open(file_path, mode='r', newline='', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        # Skip header
+        next(reader)
+        # converts rows to a list of jokes
+        jokes = [row[0] for row in reader]
+        
+    # randomly selects a joke
+    return random.choice(jokes)
+
+
 @bot.command()
 async def translate(ctx, *, text):
     """Translate words or sentences between English and Moroccan Darija."""
@@ -48,6 +66,15 @@ async def translate(ctx, *, text):
     else:
         translated_sentence = " ".join(translated_words) if translated_words else text
         await ctx.send(f"{text} → {translated_sentence}")
+
+@bot.command()
+async def nokta(ctx):
+    #gets random joke
+    random_joke = await get_random_joke(file_path)
+
+    #writes the joke
+    await ctx.send(random_joke)
+    
 
 @bot.event
 async def on_ready():
