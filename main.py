@@ -2,6 +2,7 @@
 import discord
 import os
 from discord.ext import commands
+from discord import app_commands
 import sqlite3
 import random
 import csv
@@ -10,6 +11,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+GUILD_ID = discord.Object(id=1351009686253600819)
 
 # intents need to be true for events to work
 intents = discord.Intents.default()
@@ -63,9 +65,8 @@ async def get_random_proverb(file_path_proverbs):
     return random.choice(proverbs)
 
 
-@bot.command()
-async def translate(ctx, *, text):
-    """Translate words or sentences between English and Moroccan Darija."""
+@bot.tree.command(name="translate", description="arabic->english", guild=GUILD_ID)
+async def translate(interaction: discord.Interaction, text: str):
     words = text.split()
     translated_words = []
     unknown_words = []
@@ -78,31 +79,37 @@ async def translate(ctx, *, text):
             unknown_words.append(word)  # store the unknown word here
 
     if unknown_words:
-        await ctx.send(f"mafhemtekch, chof kifach tkteb f channel #how-to-write ")
+        await interaction.response.send_message(f"mafhemtekch, chof kifach tkteb f channel #how-to-write")
     else:
         translated_sentence = " ".join(translated_words) if translated_words else text
-        await ctx.send(f"{text} → {translated_sentence}")
+        await interaction.response.send_message(f"{text} → {translated_sentence}")
 
-@bot.command()
-async def nokta(ctx):
+@bot.tree.command(name="nokta", description="return a joke", guild=GUILD_ID)
+async def nokta(interaction: discord.Interaction):
     #gets random joke
     random_joke = await get_random_joke(file_path_jokes)
 
     #writes the joke
-    await ctx.send(random_joke)
+    await interaction.response.send_message(random_joke)
 
-@bot.command()
-async def maqoula(ctx):
-    #gets random joke
+@bot.tree.command(name="maqoula", description="return a proverb", guild=GUILD_ID)
+async def maqoula(interaction: discord.Interaction):
+    #gets random proverb
     random_proverb = await get_random_proverb(file_path_proverbs)
 
-    #writes the joke
-    await ctx.send(random_proverb)
+    #writes the proverb
+    await interaction.response.send_message(random_proverb)
     
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+
+    try:
+        synced = await bot.tree.sync(guild=GUILD_ID)
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
 
 @bot.event
 async def on_message(message):
