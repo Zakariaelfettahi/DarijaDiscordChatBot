@@ -1,5 +1,6 @@
-import os
+
 import discord
+import os
 from discord.ext import commands
 import sqlite3
 import random
@@ -32,11 +33,12 @@ def translate_word(word):
     return result[0] if result else None  # if word found -> translation if not -> none
 
 # path of csv file
-file_path = './jokes/nokat.csv'
+file_path_jokes = './jokes/jokes.csv'
+file_path_proverbs = "./proverbs/proverbs.csv"
 
 # Function to randomly select a joke
-async def get_random_joke(file_path):
-    with open(file_path, mode='r', newline='', encoding='utf-8') as file:
+async def get_random_joke(file_path_jokes):
+    with open(file_path_jokes, mode='r', newline='', encoding='utf-8') as file:
         reader = csv.reader(file)
         # Skip header
         next(reader)
@@ -45,6 +47,17 @@ async def get_random_joke(file_path):
         
     # randomly selects a joke
     return random.choice(jokes)
+
+async def get_random_proverb(file_path_proverbs):
+    with open(file_path_proverbs, mode='r', newline='', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        # Skip header
+        next(reader)
+        # converts rows to a list of jokes
+        proverbs = [row[0] for row in reader]
+        
+    # randomly selects a joke
+    return random.choice(proverbs)
 
 
 @bot.command()
@@ -70,10 +83,18 @@ async def translate(ctx, *, text):
 @bot.command()
 async def nokta(ctx):
     #gets random joke
-    random_joke = await get_random_joke(file_path)
+    random_joke = await get_random_joke(file_path_jokes)
 
     #writes the joke
     await ctx.send(random_joke)
+
+@bot.command()
+async def maqoula(ctx):
+    #gets random joke
+    random_proverb = await get_random_proverb(file_path_proverbs)
+
+    #writes the joke
+    await ctx.send(random_proverb)
     
 
 @bot.event
