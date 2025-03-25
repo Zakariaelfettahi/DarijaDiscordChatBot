@@ -62,8 +62,8 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-@bot.command(name='translate', help='Translate Arabic to English')
-async def translate(ctx, *, text: str):
+@bot.command(name='terjem', help='Translate Arabic to English')
+async def terjem(ctx, *, text: str):
     def translate_word(word):
         """Fetch translation by checking all 'nX' columns dynamically."""
         conn = sqlite3.connect(TRANSLATIONS_DB_PATH)
@@ -115,8 +115,8 @@ async def nokta(ctx):
     else:
         await ctx.send("No jokes available.")
 
-@bot.command(name='coinflip', help='Flip a coin (heads or tails)')
-async def coinflip(ctx):
+@bot.command(name='pileouface', help='Flip a coin (heads or tails)')
+async def pileouface(ctx):
     result = random.choice(["face", "pile"])
     file_path = HEADS_IMAGE if result == "face" else TAILS_IMAGE
 
@@ -153,30 +153,6 @@ async def meme(ctx):
         await ctx.send(response["url"])
     else:
         await ctx.send("Couldn't fetch a meme right now 😢")
-
-@bot.command(name='troll', help='Displays a random Moroccan meme')
-async def meme(ctx):
-    # Check if the memes directory exists
-    if not os.path.exists(MEMES_PATH):
-        await ctx.send("Memes directory not found!")
-        return
-
-    # List all files in the memes directory
-    memes = [f for f in os.listdir(MEMES_PATH) if os.path.isfile(os.path.join(MEMES_PATH, f))]
-
-    # Check if there are any memes available
-    if not memes:
-        await ctx.send("No memes available.")
-        return
-
-    # Select a random meme
-    random_meme = random.choice(memes)
-    file_path = os.path.join(MEMES_PATH, random_meme)
-
-    # Send the meme
-    with open(file_path, 'rb') as file:
-        picture = discord.File(file)
-        await ctx.send(file=picture)
 
 @bot.command(name="ai", help="Ask Gemini AI anything")
 async def ai(ctx, *, prompt: str):
@@ -236,8 +212,8 @@ async def mo3awana(ctx):
     desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
     '**!nokta** = ila nghiti dhek 😂\n' \
     '**!maqoula** = ila bghiti l7ikma 🧐\n'\
-    '**!translate** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
-    '**!coinflip** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
+    '**!terjem** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
+    '**!pileouface** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
     '**!meme** = ila bghiti chi meme 🖼️\n'\
     '**!ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
     '**!ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'\
