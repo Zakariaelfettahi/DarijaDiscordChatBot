@@ -5,6 +5,8 @@ import sqlite3
 import random
 import csv
 import os
+import requests
+import google.generativeai as genai
 
 # Initialize the bot with a command prefix and intents
 intents = discord.Intents.default()
@@ -17,9 +19,15 @@ PROVERBS_TXT_PATH = './proverbs/proverbs.csv'
 COIN_IMAGES_PATH = './images/coins/'
 HEADS_IMAGE = os.path.join(COIN_IMAGES_PATH, 'face.png')
 TAILS_IMAGE = os.path.join(COIN_IMAGES_PATH, 'pile.png')
+MEMES_PATH = './memes/'
 TRANSLATIONS_DB_PATH = 'translations.db'
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+GEN_API_KEY = os.getenv("GEMINI_API")
+genai.configure(api_key=GEN_API_KEY)
+model = genai.GenerativeModel("gemini-2.0-flash")
+
 
 # Greetings and slurs lists
 GREETINGS = ['hello', 'hi', 'slm', 'salam', 'salam alaikom', 'samaykom', 'cc', 'slt', 'yo', 'hola', 'allo', 'alo']
@@ -127,6 +135,74 @@ async def maqoula(ctx):
         await ctx.send(random_proverb)
     else:
         await ctx.send("No proverbs available.")
+
+@bot.command(name='meme', help='Sends a random meme')
+async def meme(ctx):
+    url = "https://meme-api.com/gimme"
+    response = requests.get(url).json()
+    
+    if "url" in response:
+        await ctx.send(response["url"])
+    else:
+        await ctx.send("Couldn't fetch a meme right now 😢")
+
+@bot.command(name='troll', help='Displays a random Moroccan meme')
+async def meme(ctx):
+    # Check if the memes directory exists
+    if not os.path.exists(MEMES_PATH):
+        await ctx.send("Memes directory not found!")
+        return
+
+    # List all files in the memes directory
+    memes = [f for f in os.listdir(MEMES_PATH) if os.path.isfile(os.path.join(MEMES_PATH, f))]
+
+    # Check if there are any memes available
+    if not memes:
+        await ctx.send("No memes available.")
+        return
+
+    # Select a random meme
+    random_meme = random.choice(memes)
+    file_path = os.path.join(MEMES_PATH, random_meme)
+
+    # Send the meme
+    with open(file_path, 'rb') as file:
+        picture = discord.File(file)
+        await ctx.send(file=picture)
+
+@bot.command(name="ai", help="Ask Gemini AI anything")
+async def ai(ctx, *, prompt: str):
+    # Send initial "thinking..." message
+    thinking_message = await ctx.send("⏳ Thinking...")
+
+    try:
+        # Generate the response from Gemini AI
+        response = model.generate_content(prompt)
+        answer = response.text
+
+        # If the answer is too long for Discord, truncate it
+        if len(answer) > 2000:
+            answer = answer[:1997] + "..."
+
+        # Edit the thinking message to show the actual answer
+        await thinking_message.edit(content=f"**🤖 Gemini AI:**\n{answer}")
+
+    except Exception as e:
+        # In case of error, edit the thinking message to show the error
+        await thinking_message.edit(content=f"❌ Error: {str(e)}")
+
+@bot.command(name='mo3awana', help='Displays all available commands and their descriptions.')
+async def mo3awana(ctx):
+    desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
+    '**!nokta** = ila nghiti dhek 😂\n' \
+    '**!maqoula** = ila bghiti l7ikma 🧐\n'\
+    '**!translate** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
+    '**!coinflip** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
+    '**!meme** = ila bghiti chi meme 🖼️\n'\
+    '**!ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
+    
+    embed_var_helpme = discord.Embed(description=desc_helpme, color=0x00FF00)
+    await ctx.send(embed=embed_var_helpme)
 
 # Run the bot with your token
 bot.run(TOKEN)
