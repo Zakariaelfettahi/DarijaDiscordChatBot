@@ -78,8 +78,8 @@ class CommandsCog(commands.Cog):
         file_path_head = "./images/coins/face.png"
 
         # Randomly choose heads or tails
-        result = random.choice(["heads", "tails"])
-        file_path = file_path_head if result == "heads" else file_path_tails
+        result = random.choice(["face", "pile"])
+        file_path = file_path_head if result == "face" else file_path_tails
 
         # Check if the image file exists
         if not os.path.exists(file_path):
@@ -88,28 +88,30 @@ class CommandsCog(commands.Cog):
 
         # Open and send the image
         file = discord.File(file_path, filename="coin.png")
-        embed = discord.Embed(title="Coin Flip", description=f"The coin landed on **{result}**!", color=0xFFD700)
+        embed = discord.Embed(title="Coin Flip", description=f"Jatek **{result}**!", color=0xFFD700)
         embed.set_image(url="attachment://coin.png")
         await interaction.response.send_message(embed=embed, file=file)
 
     @app_commands.command(name="maqoula", description="Return a proverb")
-    async def maqoula(self, interaction: discord.Interaction):
-      # Path of CSV files
-      file_path_proverbs = "./proverbs/proverbs.csv"
-      # Function to randomly select a proverb
-      async def get_random_proverb(file_path_proverbs):
-          with open(file_path_proverbs, mode='r', newline='', encoding='utf-8') as file:
-              reader = csv.reader(file)
-              # Skip header
-              next(reader)
-              # Converts rows to a list of proverbs
-              proverbs = [row[0] for row in reader]
-              
-          # Randomly selects a proverb
-          return random.choice(proverbs)
-      random_proverb = await get_random_proverb(file_path_proverbs)
-      # Sends the proverb
-      await interaction.response.send_message(random_proverb)
+    async def coinflip(self, interaction: discord.Interaction):
+        # Paths to coin images
+        file_path_tails = "./images/coins/pile.png"
+        file_path_head = "./images/coins/face.png"
+
+        # Randomly choose heads or tails
+        result = random.choice(["face", "pile"])
+        file_path = file_path_head if result == "face" else file_path_tails
+
+        # Check if the image file exists
+        if not os.path.exists(file_path):
+            await interaction.response.send_message("Coin image not found!")
+            return
+
+        # Open and send the image
+        file = discord.File(file_path, filename="coin.png")
+        embed = discord.Embed(title="Coin Flip", description=f"Jatek **{result}**!", color=0xFFD700)
+        embed.set_image(url="attachment://coin.png")
+        await interaction.response.send_message(embed=embed, file=file)
 
     @commands.Cog.listener()  # Decorator to indicate it's an event listener
     async def on_message(self, message):
