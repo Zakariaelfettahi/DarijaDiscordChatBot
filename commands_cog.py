@@ -1,25 +1,66 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import sqlite3
 import random
 import csv
-import os  # Import the 'os' module
+import os
+import requests
+import google.generativeai as genai  # Assuming you still want to use Gemini
 
-class CommandsCog(commands.Cog):
-    def __init__(self, bot: commands.Bot, GUILD_ID: str):
+# Path configurations
+JOKES_CSV_PATH = './jokes/jokes.csv'
+PROVERBS_TXT_PATH = './proverbs/proverbs.csv'
+COIN_IMAGES_PATH = './images/coins/'
+HEADS_IMAGE = os.path.join(COIN_IMAGES_PATH, 'face.png')
+TAILS_IMAGE = os.path.join(COIN_IMAGES_PATH, 'pile.png')
+MEMES_PATH = './memes/'
+TRANSLATIONS_DB_PATH = 'translations.db'
+
+# Greetings and slurs lists
+GREETINGS = ['hello', 'hi', 'slm', 'salam', 'salam alaikom', 'samaykom', 'cc', 'slt', 'yo', 'hola', 'allo', 'alo']
+SLURS = ['zabi', 'zebi', 'thawa', 'tqwd', 't9wd', 't7wa', 'zaml', 'li7wak', 'li hwak', 'li 7wak', 'zamlbok', 'mok',
+         'sir', 'lay', 'lyn3el', 'lyn3l', 'tbonmok', 'tbon', 'qhba', '9hba', 'zeb', 'w9', 'khtek', 'zobi', '7choun', 'zab']
+FES = ["fes" , "FES" ,"Fes"]
+
+
+class BotCommands(commands.Cog):  # Changed class name to BotCommands
+    def __init__(self, bot, gemini_api_key, weather_api_key):  # Pass bot instance and API keys in constructor
         self.bot = bot
-        self.GUILD_ID = GUILD_ID
-        if GUILD_ID:
-            self.guild = discord.Object(id=int(GUILD_ID))  # Ensure GUILD_ID is an integer
-        else:
-            self.guild = None
+        self.gemini_api_key = gemini_api_key
+        self.weather_api_key = weather_api_key
 
-    @app_commands.command(name="translate", description="Translate Arabic to English")
-    async def translate(self, interaction: discord.Interaction, text: str):
+        # Initialize Gemini only if the key is provided
+        if gemini_api_key:
+            genai.configure(api_key=gemini_api_key)
+            self.model = genai.GenerativeModel("gemini-2.0-flash")
+        else:
+            self.model = None  # Or handle the case where Gemini isn't available
+
+        self.BASE_URL = "https://api.weatherapi.com/v1/current.json"
+
+    @commands.Cog.listener()  # Use Cog.listener() for event listeners within a cog
+    async def on_message(self, message):
+        if message.author == self.bot.user:
+            return
+
+        # Greeting response
+        if any(message.content.lower().startswith(greeting) for greeting in GREETINGS):
+            await message.channel.send(f"Samaykom {message.author.mention}")
+
+        # Slur detection and warning
+        if any(slur in message.content.lower() for slur in SLURS):
+            await message.channel.send(f"Matkheserch lhdra a w9 {message.author.mention}")
+        
+        # fes detection
+        if any(fes in message.content.lower() for fes in FES):
+          await message.channel.send(f"Fes li 7akma l3alam {message.author.mention}")
+
+
+    @commands.command(name='terjem', help='Translate Arabic to English')
+    async def terjem(self, ctx, *, text: str):
         def translate_word(word):
             """Fetch translation by checking all 'nX' columns dynamically."""
-            conn = sqlite3.connect("translations.db")
+            conn = sqlite3.connect(TRANSLATIONS_DB_PATH)
             cursor = conn.cursor()
 
             # Get all 'nX' columns from the table dynamically
@@ -32,7 +73,7 @@ class CommandsCog(commands.Cog):
 
             result = cursor.fetchone()
             conn.close()
-            return result[0] if result else None  # if word found -> translation if not -> none
+            return result[0] if result else None
 
         words = text.split()
         translated_words = []
@@ -42,120 +83,158 @@ class CommandsCog(commands.Cog):
             translation = translate_word(word.lower())
             if translation:
                 translated_words.append(translation)
-            else:  # If word is not found
-                unknown_words.append(word)  # Store the unknown word here
+            else:
+                unknown_words.append(word)
 
         if unknown_words:
-            await interaction.response.send_message("mafhemtekch, chof kifach tkteb f channel #how-to-write")
+            await ctx.send("mafhemtekch, chof kifach tkteb f channel #how-to-write")
         else:
             translated_sentence = " ".join(translated_words) if translated_words else text
-            await interaction.response.send_message(f"{text} → {translated_sentence}")
+            await ctx.send(f"{text} → {translated_sentence}")
 
-    @app_commands.command(name="nokta", description="Return a joke")
-    async def nokta(self, interaction: discord.Interaction):
-      # Path of CSV files
-      file_path_jokes = './jokes/jokes.csv'
-      async def get_random_joke(file_path_jokes):
-          with open(file_path_jokes, mode='r', newline='', encoding='utf-8') as file:
-              reader = csv.reader(file)
-              # Skip header
-              next(reader)
-              # Converts rows to a list of jokes
-              jokes = [row[0] for row in reader]
-              
-          # Randomly selects a joke
-          return random.choice(jokes)
-      random_joke = await get_random_joke(file_path_jokes)
-      # Sends the joke
-      await interaction.response.send_message(random_joke)
-
-
-    
-    @app_commands.command(name="coinflip", description="Flip a coin (heads or tails)")
-    async def coinflip(self, interaction: discord.Interaction):
-        # Paths to coin images
-        file_path_tails = "./images/coins/pile.png"
-        file_path_head = "./images/coins/face.png"
-
-        # Randomly choose heads or tails
-        result = random.choice(["face", "pile"])
-        file_path = file_path_head if result == "face" else file_path_tails
-
-        # Check if the image file exists
-        if not os.path.exists(file_path):
-            await interaction.response.send_message("Coin image not found!")
+    @commands.command(name='nokta', help='Return a joke')
+    async def nokta(self, ctx):
+        if not os.path.exists(JOKES_CSV_PATH):
+            await ctx.send("Jokes file not found!")
             return
 
-        # Open and send the image
+        with open(JOKES_CSV_PATH, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            next(reader)  # Skip header
+            jokes = [row[0] for row in reader]
+
+        if jokes:
+            random_joke = random.choice(jokes)
+            await ctx.send(random_joke)
+        else:
+            await ctx.send("No jokes available.")
+
+    @commands.command(name='pileouface', help='Flip a coin (heads or tails)')
+    async def pileouface(self, ctx):
+        result = random.choice(["face", "pile"])
+        file_path = HEADS_IMAGE if result == "face" else TAILS_IMAGE
+
+        if not os.path.exists(file_path):
+            await ctx.send("Coin image not found!")
+            return
+
         file = discord.File(file_path, filename="coin.png")
         embed = discord.Embed(title="Coin Flip", description=f"Jatek **{result}**!", color=0xFFD700)
         embed.set_image(url="attachment://coin.png")
-        await interaction.response.send_message(embed=embed, file=file)
+        await ctx.send(embed=embed, file=file)
 
-    @app_commands.command(name="maqoula", description="Return a proverb")
-    async def coinflip(self, interaction: discord.Interaction):
-        # Paths to coin images
-        file_path_tails = "./images/coins/pile.png"
-        file_path_head = "./images/coins/face.png"
-
-        # Randomly choose heads or tails
-        result = random.choice(["face", "pile"])
-        file_path = file_path_head if result == "face" else file_path_tails
-
-        # Check if the image file exists
-        if not os.path.exists(file_path):
-            await interaction.response.send_message("Coin image not found!")
+    @commands.command(name='maqoula', help='Return a proverb')
+    async def maqoula(self, ctx):
+        if not os.path.exists(PROVERBS_TXT_PATH):
+            await ctx.send("Proverbs file not found!")
             return
 
-        # Open and send the image
-        file = discord.File(file_path, filename="coin.png")
-        embed = discord.Embed(title="Coin Flip", description=f"Jatek **{result}**!", color=0xFFD700)
-        embed.set_image(url="attachment://coin.png")
-        await interaction.response.send_message(embed=embed, file=file)
+        with open(PROVERBS_TXT_PATH, 'r', encoding='utf-8') as file:
+            proverbs = file.readlines()
 
-    @commands.Cog.listener()  # Decorator to indicate it's an event listener
-    async def on_message(self, message):
-        """Handles automatic greetings and slurs detection."""
-        if message.author == self.bot.user:  # Use self.bot to access the bot instance
+        if proverbs:
+            random_proverb = random.choice(proverbs).strip()
+            await ctx.send(random_proverb)
+        else:
+            await ctx.send("No proverbs available.")
+
+    @commands.command(name='meme', help='Sends a random meme')
+    async def meme(self, ctx):
+        url = "https://meme-api.com/gimme"
+        response = requests.get(url).json()
+
+        if "url" in response:
+            await ctx.send(response["url"])
+        else:
+            await ctx.send("Couldn't fetch a meme right now 😢")
+
+    @commands.command(name="ai", help="Ask Gemini AI anything")
+    async def ai(self, ctx, *, prompt: str):
+        if not self.model:
+            await ctx.send("Gemini AI is not available. Please check the API key.")
             return
 
-        greetings = ['hello', 'hi', 'slm', 'salam', 'salam alaikom', 'samaykom', 'cc', 'slt', 'yo', 'hola', 'allo', 'alo']
-        slurs = ['zabi', 'zebi', 'thawa', 'tqwd', 't9wd', 't7wa', 'zaml', 'li7wak', 'li hwak', 'li 7wak', 'zamlbok', 'mok', 
-                 'sir', 'lay', 'lyn3el', 'lyn3l', 'tbonmok', 'tbon', 'qhba', '9hba', 'zeb', 'w9', 'khtek', 'zobi', '7choun', 'zab']
+        # Send initial "thinking..." message
+        thinking_message = await ctx.send("⏳ Thinking...")
 
-        if any(message.content.lower().startswith(greeting) for greeting in greetings):
-            await message.channel.send(f"Samaykom {message.author}")
+        try:
+            # Generate the response from Gemini AI
+            response = self.model.generate_content(prompt)
+            answer = response.text
 
-        if any(slur in message.content.lower() for slur in slurs):
-            await message.channel.send(f"Matkheserch lhdra a w9 {message.author}")
+            # If the answer is too long for Discord, truncate it
+            if len(answer) > 2000:
+                answer = answer[:1997] + "..."
 
-        await self.bot.process_commands(message)  # Ensure commands still work, use self.bot
+            # Edit the thinking message to show the actual answer
+            await thinking_message.edit(content=f"**🤖 Gemini AI:**\n{answer}")
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        if self.GUILD_ID:
-            try:
-                synced = await self.bot.tree.sync(guild=self.guild)
-                print(f"Synced {len(synced)} command(s) for guild {self.GUILD_ID} from cog.")
-            except Exception as e:
-                print(f"Failed to sync commands for guild {self.GUILD_ID}: {e}")
+        except Exception as e:
+            # In case of error, edit the thinking message to show the error
+            await thinking_message.edit(content=f"❌ Error: {str(e)}")
+
+
+    @commands.command(name='ljew', help='Get the current weather for a city.')
+    async def ljew(self, ctx, *, city: str):
+        # Create the URL with the city name and API key
+        url = f"{self.BASE_URL}?key={self.weather_api_key}&q={city}&aqi=no"
+
+        # Send the request to WeatherAPI
+        response = requests.get(url)
+        data = response.json()
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Extract necessary data from the response
+            temp_c = data['current']['temp_c']
+            temp_f = data['current']['temp_f']
+            condition = data['current']['condition']['text']
+            wind_kph = data['current']['wind_kph']
+            humidity = data['current']['humidity']
+            feels_like = data['current']['feelslike_c']
+
+            # Send the weather info as an embed
+            embed = discord.Embed(title=f"Ljew f {city.title()}", color = 0xADD8E6)
+            embed.add_field(name="Ki dayra d3wa", value=condition, inline=False)
+            embed.add_field(name="L7arara", value=f"{temp_c}°C / {temp_f}°F", inline=False)
+            embed.add_field(name="L7arara bach ghat7es", value=f"{feels_like}°C", inline=False)
+            embed.add_field(name="Sor3at riya7", value=f"{wind_kph} km/h", inline=False)
+            embed.add_field(name="Rotouba", value=f"{humidity}%", inline=False)
+
+            await ctx.send(embed=embed)
         else:
-            try:
-                synced = await self.bot.tree.sync()
-                print(f"Synced {len(synced)} command(s) globally from cog.")
-            except Exception as e:
-                print(f"Failed to sync global commands: {e}")
+            await ctx.send(f"Sme7li, ma9derch nl9a ljew f **{city}**. 3afak 7awel mra okhra.")
 
-        commands = self.bot.tree.get_commands(guild=self.guild)
-        if commands:
-            print("Registered commands from cog:")
-            for command in commands:
-                print(f"- {command.name}: {command.description}")
-        else:
-            print("No commands are currently registered in the cog.")
+    @commands.command(name='mo3awana', help='Displays all available commands and their descriptions.')
+    async def mo3awana(self, ctx):
+        desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
+        '**!nokta** = ila nghiti dhek 😂\n' \
+        '**!maqoula** = ila bghiti l7ikma 🧐\n'\
+        '**!terjem** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
+        '**!pileouface** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
+        '**!meme** = ila bghiti chi meme 🖼️\n'\
+        '**!ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
+        '**!ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'
+
+        embed_var_helpme = discord.Embed(description=desc_helpme, color=0x00FF00)
+        await ctx.send(embed=embed_var_helpme)
 
 
-async def setup(bot: commands.Bot):
-    # Ensure GUILD_ID is loaded from the environment variables
-    GUILD_ID = os.getenv("GUILD_ID")
-    await bot.add_cog(CommandsCog(bot, GUILD_ID))
+# async def setup(bot): # old code
+#     await bot.add_cog(BotCommands(bot))
+
+# The setup function remains the same.  This is what discord.py uses to find and load the cog.
+async def setup(bot):
+    """
+    This function is called by discord.py to load the cog.
+    It's essential to have this for the cog to be recognized.
+    """
+    # Load API keys from environment variables.  This is safer than hardcoding them.
+    gemini_api_key = os.getenv("GEMINI_API")
+    weather_api_key = os.getenv("WEATHER_API")
+
+    # Instantiate the cog with the bot instance and API keys.
+    cog = BotCommands(bot, gemini_api_key, weather_api_key)
+
+    # Add the cog to the bot.
+    await bot.add_cog(cog)
