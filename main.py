@@ -24,16 +24,20 @@ TRANSLATIONS_DB_PATH = 'translations.db'
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-GEN_API_KEY = os.getenv("GEMINI_API")
-genai.configure(api_key=GEN_API_KEY)
+
+GEMINI_API_KEY = os.getenv("GEMINI_API")
+genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash")
+
+WEATHER_API_KEY = os.getenv("WEATHER_API")
+BASE_URL = "https://api.weatherapi.com/v1/current.json"
 
 
 # Greetings and slurs lists
 GREETINGS = ['hello', 'hi', 'slm', 'salam', 'salam alaikom', 'samaykom', 'cc', 'slt', 'yo', 'hola', 'allo', 'alo']
 SLURS = ['zabi', 'zebi', 'thawa', 'tqwd', 't9wd', 't7wa', 'zaml', 'li7wak', 'li hwak', 'li 7wak', 'zamlbok', 'mok',
          'sir', 'lay', 'lyn3el', 'lyn3l', 'tbonmok', 'tbon', 'qhba', '9hba', 'zeb', 'w9', 'khtek', 'zobi', '7choun', 'zab']
-
+FES = ["fes" , "FES" ,"Fes"]
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
@@ -51,6 +55,10 @@ async def on_message(message):
     # Slur detection and warning
     if any(slur in message.content.lower() for slur in SLURS):
         await message.channel.send(f"Matkheserch lhdra a w9 {message.author.mention}")
+    
+    # fes detection
+    if any(fes in message.content.lower() for fes in FES):
+      await message.channel.send(f"Fes li 7akma l3alam {message.author.mention}")
 
     await bot.process_commands(message)
 
@@ -191,6 +199,38 @@ async def ai(ctx, *, prompt: str):
         # In case of error, edit the thinking message to show the error
         await thinking_message.edit(content=f"❌ Error: {str(e)}")
 
+
+@bot.command(name='ljew', help='Get the current weather for a city.')
+async def ljew(ctx, *, city: str):
+    # Create the URL with the city name and API key
+    url = f"{BASE_URL}?key={WEATHER_API_KEY}&q={city}&aqi=no"
+    
+    # Send the request to WeatherAPI
+    response = requests.get(url)
+    data = response.json()
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Extract necessary data from the response
+        temp_c = data['current']['temp_c']
+        temp_f = data['current']['temp_f']
+        condition = data['current']['condition']['text']
+        wind_kph = data['current']['wind_kph']
+        humidity = data['current']['humidity']
+        feels_like = data['current']['feelslike_c']
+
+        # Send the weather info as an embed
+        embed = discord.Embed(title=f"Ljew f {city.title()}", color = 0xADD8E6)
+        embed.add_field(name="Ki dayra d3wa", value=condition, inline=False)
+        embed.add_field(name="L7arara", value=f"{temp_c}°C / {temp_f}°F", inline=False)
+        embed.add_field(name="L7arara bach ghat7es", value=f"{feels_like}°C", inline=False)
+        embed.add_field(name="Sor3at riya7", value=f"{wind_kph} km/h", inline=False)
+        embed.add_field(name="Rotouba", value=f"{humidity}%", inline=False)
+
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send(f"Sme7li, ma9derch nl9a ljew f **{city}**. 3afak 7awel mra okhra.")
+
 @bot.command(name='mo3awana', help='Displays all available commands and their descriptions.')
 async def mo3awana(ctx):
     desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
@@ -200,6 +240,7 @@ async def mo3awana(ctx):
     '**!coinflip** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
     '**!meme** = ila bghiti chi meme 🖼️\n'\
     '**!ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
+    '**!ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'\
     
     embed_var_helpme = discord.Embed(description=desc_helpme, color=0x00FF00)
     await ctx.send(embed=embed_var_helpme)
