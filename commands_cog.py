@@ -11,7 +11,7 @@ class CommandsCog(commands.Cog):
         self.bot = bot
         self.GUILD_ID = GUILD_ID
         if GUILD_ID:
-            self.guild = discord.Object(id=GUILD_ID)
+            self.guild = discord.Object(id=int(GUILD_ID))  # Ensure GUILD_ID is an integer
         else:
             self.guild = None
 
@@ -68,6 +68,29 @@ class CommandsCog(commands.Cog):
       random_joke = await get_random_joke(file_path_jokes)
       # Sends the joke
       await interaction.response.send_message(random_joke)
+
+
+    
+    @app_commands.command(name="coinflip", description="Flip a coin (heads or tails)")
+    async def coinflip(self, interaction: discord.Interaction):
+        # Paths to coin images
+        file_path_tails = "./images/coins/pile.png"
+        file_path_head = "./images/coins/face.png"
+
+        # Randomly choose heads or tails
+        result = random.choice(["heads", "tails"])
+        file_path = file_path_head if result == "heads" else file_path_tails
+
+        # Check if the image file exists
+        if not os.path.exists(file_path):
+            await interaction.response.send_message("Coin image not found!")
+            return
+
+        # Open and send the image
+        file = discord.File(file_path, filename="coin.png")
+        embed = discord.Embed(title="Coin Flip", description=f"The coin landed on **{result}**!", color=0xFFD700)
+        embed.set_image(url="attachment://coin.png")
+        await interaction.response.send_message(embed=embed, file=file)
 
     @app_commands.command(name="maqoula", description="Return a proverb")
     async def maqoula(self, interaction: discord.Interaction):
