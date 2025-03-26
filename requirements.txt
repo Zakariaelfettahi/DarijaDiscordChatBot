@@ -3,3 +3,7 @@ python-dotenv
 google-generativeai
 requests
 aiosqlite       
+diffusers
+torch
+transformers
+accelerate
