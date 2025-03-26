@@ -1,63 +1,68 @@
 # Moroccan Darija Discord Bot
 
 ## 🤖 Introduction
-This is a **Moroccan Darija Discord Bot** designed to interact with users in Moroccan Arabic (Darija). The bot can respond to common phrases, provide useful information, and add a fun Moroccan twist to your Discord server.
+This is a **Moroccan Darija Discord Bot** designed to interact with users in Moroccan Arabic (Darija). The bot that have many useful features eg: ai, translation ... , provide useful information, and add a fun Moroccan twist to your Discord server.
 
 ## ✨ Features
 - 🗣️ **Understands Moroccan Darija**
-- 🎵 **Plays Moroccan music** (if integrated with a music bot)
 - 🧠 **AI-powered responses** for general conversation
 - 📜 **Provides Moroccan proverbs & jokes**
-- 🏆 **Fun quizzes about Moroccan culture**
 - 🌍 **Translates between Darija & other languages**
 
 ## 🛠️ Installation & Setup
 ### 1️⃣ Prerequisites
 - A **Discord server**
 - A **bot token** from [Discord Developer Portal](https://discord.com/developers/applications)
-- **Node.js** installed (for JavaScript) or **Python** (if using discord.py)
+-   **Python** 
 
 ### 2️⃣ Clone the Repository
 ```sh
-git clone https://github.com/yourusername/moroccan-darija-bot.git
-cd moroccan-darija-bot
+git clone https://github.com/your-username/DarijaDiscordChatBot
+cd DarijaDiscordChatBot-main
 ```
 
 ### 3️⃣ Install Dependencies
-For Node.js:
-```sh
-npm install discord.js dotenv axios
 ```
 For Python:
 ```sh
-pip install discord.py dotenv requests
+pip install -r requirements.txt
+
+For Python3:
+```sh
+pip3 install -r requirements.txt
 ```
 
 ### 4️⃣ Set Up Environment Variables
-Create a `.env` file and add your **bot token**:
+Create a `.env` file and add your **bot token**, **gemini api**, **weather api**:
 ```
-DISCORD_TOKEN=your-bot-token
+DISCORD_BOT_TOKEN=your-bot-token
+GUILD_ID = you-guild-id
+GEMINI_API = your-gemini-api
+WEATHER_API = your-weather-api
 ```
 
 ### 5️⃣ Run the Bot
-For Node.js:
-```sh
-node bot.js
 ```
 For Python:
 ```sh
-python bot.py
+python main.py
+
+For Python3:
+```sh
+python3 main.py
 ```
 
 ## 📜 Commands
 | Command | Description |
 |---------|-------------|
-| `!salam` | Greets the user in Darija |
-| `!music` | Suggests a Moroccan song |
-| `!joke` | Tells a Moroccan joke |
-| `!proverb` | Shares a Moroccan proverb |
-| `!quiz` | Starts a Moroccan culture quiz |
-| `!translate darija Bonjour` | Translates from French to Darija |
+| `!terjem` | translates from darija to english |
+| `!mo3awana` | gets help, commands |
+| `!nokta` | Tells a Moroccan joke |
+| `!maqoula` | Shares a Moroccan proverb |
+| `!ljew` | returns the weather in a given city |
+| `!pileouface` | plays a game of coin flip |
+| `!ai` | ask any question and get answer from gemini |
+| `!meme` | returns a meme|
 
 ## 🔧 Contributing
 Want to help improve the bot? Feel free to:

@@ -187,13 +187,13 @@ class BotCommands(commands.Cog):
     @app_commands.command(name='mo3awana', description='Displays all available commands and their descriptions.')
     async def mo3awana(self, interaction: discord.Interaction):
         desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
-        '**!nokta** = ila nghiti dhek 😂\n' \
-        '**!maqoula** = ila bghiti l7ikma 🧐\n'\
-        '**!terjem** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
-        '**!pileouface** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
-        '**!meme** = ila bghiti chi meme 🖼️\n'\
-        '**!ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
-        '**!ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'
+        '**/nokta** = ila nghiti dhek 😂\n' \
+        '**/maqoula** = ila bghiti l7ikma 🧐\n'\
+        '**/terjem** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n'\
+        '**/pileouface** = ila tlefti w ma3refti madir, pile ou face 🎲\n'\
+        '**/meme** = ila bghiti chi meme 🖼️\n'\
+        '**/ai** = ila bghiti tswl l ai (gemini), text only 🤖\n'\
+        '**/ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'
 
         embed_var_helpme = discord.Embed(description=desc_helpme, color=0x00FF00)
         await interaction.response.send_message(embed=embed_var_helpme)
