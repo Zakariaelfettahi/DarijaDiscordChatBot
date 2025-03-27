@@ -233,6 +233,59 @@ class BotCommands(commands.Cog):
             translated_sentence = " ".join(translated_words) if translated_words else text
             await interaction.response.send_message(f"{text} → {translated_sentence}")
 
+    @app_commands.command(name='terjemEng', description='Translate English to Arabic')
+    async def terjemEng(self, interaction: discord.Interaction, text: str): 
+        """Translates a given English text to Arabic."""
+
+        def translate_word(word):
+            """Translates a single word from English to Arabic using the SQLite database."""
+            try:
+                conn = sqlite3.connect(TRANSLATIONS_DB_PATH)
+                cursor = conn.cursor()
+
+                # Search for the English word in the 'eng' column
+                cursor.execute("SELECT darija_ar FROM translations WHERE eng=?", (word,))
+                result = cursor.fetchone()
+
+                if result:
+                    return result[0]  # Return Arabic translation, if found
+                else:
+                    # Also check in other 'n*' columns for reverse lookup (Arabic to Arabic, then return the english translation)
+                    cursor.execute("PRAGMA table_info(translations)")
+                    columns = [row[1] for row in cursor.fetchall() if row[1].startswith("n")]
+                    where_clause = " OR ".join([f"{col}=?" for col in columns])
+                    if where_clause:  # Only execute if there are 'n*' columns
+                        cursor.execute(f"SELECT darija_ar FROM translations WHERE {where_clause}", ([word] * len(columns)))
+                        result = cursor.fetchone()
+                        if result:
+                            return result[0]
+
+                return None # Return None if no translation found
+
+            except sqlite3.Error as e:
+                print(f"Database error: {e}")
+                return None
+            finally:
+                if conn:
+                    conn.close()
+
+        words = text.split()
+        translated_words = []
+        unknown_words = []
+
+        for word in words:
+            translation = translate_word(word.lower())
+            if translation:
+                translated_words.append(translation)
+            else:
+                unknown_words.append(word)
+
+        if unknown_words:
+            await interaction.response.send_message(f"Could not translate the following words: {', '.join(unknown_words)}")
+        else:
+            translated_sentence = " ".join(translated_words) if translated_words else text
+            await interaction.response.send_message(f"{text} → {translated_sentence}")
+
     @app_commands.command(name='nokta', description='Return a joke')
     async def nokta(self, interaction: discord.Interaction):
         """Returns a random joke from the jokes CSV file."""
@@ -392,13 +445,15 @@ class BotCommands(commands.Cog):
         desc_helpme = '__**Kifach tkhdem b lbot **__\n\n' \
         '**/nokta** = ila nghiti dhek 😂\n' \
         '**/maqoula** = ila bghiti l7ikma 🧐\n' \
-        '**/terjem** = ila bghiti terjem mn darija l english (eg: !translate salam) 🇲🇦🇬🇧\n' \
+        '**/terjem** = ila bghiti terjem mn darija l english (eg: /terjem salam) 🇲🇦🇬🇧\n' \
+        '**/terjemEng** = ila bghiti terjem mn english l darija (eg: /terjemEng Hi) 🇬🇧🇲🇦\n' \
         '**/pileouface** = ila tlefti w ma3refti madir, pile ou face 🎲\n' \
         '**/meme** = ila bghiti chi meme 🖼️\n' \
-        '**/trivia** = ila bghiti tl3eb lo3ba dyal culture generale 🤓\n'
+        '**/trivia** = ila bghiti tl3eb lo3ba dyal culture generale 🤓\n' \
         '**/ai** = ila bghiti tswl l ai (gemini), text only 🤖\n' \
         '**/generate** = ila bghiti tgenerati tswira b l ai 📸\n' \
-        '**/ljew** = ila bghiti t3ref ljew d chi mdina (eg: !ljew Csablanca) 🌦️\n'
+        '**/ljew** = ila bghiti t3ref ljew d chi mdina (eg: /ljew Casablanca) 🌦️'
+
                         
         embed_var_helpme = discord.Embed(description=desc_helpme, color=0x00FF00)
         await interaction.response.send_message(embed=embed_var_helpme)
